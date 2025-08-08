@@ -1,0 +1,140 @@
+import { createLogger, LogLevel } from '@hyperse/logger';
+import { createStdoutPlugin } from '../src/create-stdout-plugin.js';
+
+describe('createStdoutPlugin', () => {
+  // @ts-ignore
+  let mockStdLog: ReturnType<typeof vi.spyOn<typeof process.stdout, 'write'>>;
+
+  beforeEach(() => {
+    mockStdLog = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    mockStdLog.mockRestore();
+  });
+
+  it('does not log when plugin is disabled', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ disable: true }))
+      .build();
+
+    await logger.info('info message');
+
+    expect(mockStdLog).not.toHaveBeenCalled();
+  });
+
+  it('logs string message (info)', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ noColor: true }))
+      .build();
+
+    await logger.info('info message');
+
+    expect(mockStdLog).toHaveBeenCalledTimes(1);
+    const output = mockStdLog.mock.calls[0][0];
+    expect(output).toMatch(/\[ INFO \]/);
+    expect(output).toMatch(/info message/);
+  });
+
+  it('logs object message (warn)', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ noColor: true }))
+      .build();
+
+    await logger.warn({
+      prefix: 'warn prefix',
+      name: 'warn name',
+      message: 'warn message',
+    });
+
+    expect(mockStdLog).toHaveBeenCalledTimes(1);
+    const output = mockStdLog.mock.calls[0][0];
+    expect(output).toMatch(/\[ WARN \]/);
+    expect(output).toMatch(/WARN PREFIX/);
+    expect(output).toMatch(/warn name/);
+    expect(output).toMatch(/warn message/);
+  });
+
+  it('logs object message (debug)', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ noColor: true }))
+      .build();
+
+    await logger.debug({
+      prefix: 'debug prefix',
+      name: 'debug name',
+      message: 'debug message',
+    });
+
+    expect(mockStdLog).toHaveBeenCalledTimes(1);
+    const output = mockStdLog.mock.calls[0][0];
+    expect(output).toMatch(/\[ DEBUG \]/);
+    expect(output).toMatch(/DEBUG PREFIX/);
+    expect(output).toMatch(/debug name/);
+    expect(output).toMatch(/debug message/);
+  });
+
+  it('logs object message (verbose)', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ noColor: true }))
+      .build();
+
+    await logger.verbose({
+      prefix: 'verbose prefix',
+      name: 'verbose name',
+      message: 'verbose message',
+    });
+
+    expect(mockStdLog).toHaveBeenCalledTimes(1);
+    const output = mockStdLog.mock.calls[0][0];
+    expect(output).toMatch(/\[ VERBOSE \]/);
+    expect(output).toMatch(/VERBOSE PREFIX/);
+    expect(output).toMatch(/verbose name/);
+    expect(output).toMatch(/verbose message/);
+  });
+
+  it('logs error with stack', async () => {
+    const logger = createLogger({
+      name: 'hps-logger',
+      thresholdLevel: LogLevel.Verbose,
+    })
+      .use(createStdoutPlugin({ noColor: true }))
+      .build();
+
+    let error: Error;
+    try {
+      throw new Error('error message');
+    } catch (e) {
+      error = e as Error;
+    }
+    await logger.error({
+      name: 'error name',
+      message: error!.message,
+      stack: error!.stack,
+    });
+
+    expect(mockStdLog).toHaveBeenCalledTimes(1);
+    const output = mockStdLog.mock.calls[0][0];
+    expect(output).toMatch(/\[ ERROR \]/);
+    expect(output).toMatch(/error name/);
+    expect(output).toMatch(/error message/);
+    expect(output).toMatch(/at /); // stack trace
+  });
+});
